@@ -3,7 +3,31 @@ import "./App.css";
 
 type ScrapeResult = Record<string, unknown>;
 
-const FEATURED_KEYS = ["title", "company", "location", "salary", "skills"] as const;
+const FEATURED_KEYS = [
+  "title",
+  "company",
+  "location",
+  "workType",
+  "salary",
+  "skills",
+  "description",
+  "url",
+] as const;
+
+const HIDDEN_KEYS = new Set([
+  "_id",
+  "__v",
+  "id",
+  "createdAt",
+  "updatedAt",
+  "message",
+]);
+
+const WORK_TYPE_LABELS: Record<string, string> = {
+  remote: "Remote",
+  onsite: "On-site",
+  hybrid: "Hybrid",
+};
 
 function asText(value: unknown): string | null {
   if (typeof value === "string") {
@@ -32,9 +56,62 @@ function skillList(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function asJob(body: unknown): ScrapeResult | null {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+  if ("job" in body && body.job && typeof body.job === "object") {
+    return body.job as ScrapeResult;
+  }
+  return body as ScrapeResult;
+}
+
+function workTypeLabel(value: unknown): string | null {
+  const key = asText(value)?.toLowerCase();
+  if (!key) {
+    return null;
+  }
+  return WORK_TYPE_LABELS[key] ?? asText(value);
+}
+
+function salaryFigure(value: unknown): string | null {
+  const asString = asText(value);
+  if (asString) {
+    return asString;
+  }
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const { min, max, currency } = value as {
+    min?: unknown;
+    max?: unknown;
+    currency?: unknown;
+  };
+  const format = (amount: unknown) =>
+    typeof amount === "number" && Number.isFinite(amount)
+      ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(amount)
+      : null;
+
+  const minText = format(min);
+  const maxText = format(max);
+  if (!minText && !maxText) {
+    return null;
+  }
+
+  const range =
+    minText && maxText && minText !== maxText ? `${minText}–${maxText}` : (minText ?? maxText);
+  const currencyText = asText(currency);
+  return currencyText ? `${currencyText} ${range}` : range;
+}
+
 function extraEntries(result: ScrapeResult): [string, string][] {
   return Object.entries(result)
-    .filter(([key]) => !FEATURED_KEYS.includes(key as (typeof FEATURED_KEYS)[number]))
+    .filter(
+      ([key]) =>
+        !FEATURED_KEYS.includes(key as (typeof FEATURED_KEYS)[number]) &&
+        !HIDDEN_KEYS.has(key),
+    )
     .map(([key, value]) => {
       if (Array.isArray(value)) {
         const joined = value.map((item) => asText(item)).filter(Boolean).join(", ");
@@ -84,7 +161,7 @@ export default function App() {
         return;
       }
 
-      setResult(body as ScrapeResult);
+      setResult(asJob(body));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -104,11 +181,22 @@ export default function App() {
   const title = asText(result?.title);
   const company = asText(result?.company);
   const location = asText(result?.location);
-  const salary = asText(result?.salary);
+  const workType = workTypeLabel(result?.workType);
+  const salary = salaryFigure(result?.salary);
   const skills = skillList(result?.skills);
+  const description = asText(result?.description);
+  const sourceUrl = asText(result?.url);
   const extras = result ? extraEntries(result) : [];
   const hasClipping = Boolean(
-    result && (title || company || location || salary || skills.length || extras.length),
+    result &&
+      (title ||
+        company ||
+        location ||
+        workType ||
+        salary ||
+        skills.length ||
+        description ||
+        extras.length),
   );
 
   return (
@@ -176,6 +264,7 @@ export default function App() {
               <p className="dateline">
                 {company ? <span>{company}</span> : null}
                 {location ? <span>{location}</span> : null}
+                {workType ? <span className="work-type">{workType}</span> : null}
               </p>
               {salary ? (
                 <p className="salary">
@@ -189,6 +278,19 @@ export default function App() {
                     <li key={skill}>{skill}</li>
                   ))}
                 </ul>
+              ) : null}
+              {description ? (
+                <div className="notice">
+                  <p className="notice-label">Notice</p>
+                  <p className="notice-copy">{description}</p>
+                </div>
+              ) : null}
+              {sourceUrl ? (
+                <p className="source">
+                  <a href={sourceUrl} target="_blank" rel="noreferrer">
+                    {sourceUrl}
+                  </a>
+                </p>
               ) : null}
               {extras.length > 0 ? (
                 <dl className="extras">
@@ -207,8 +309,8 @@ export default function App() {
             <div className="awaiting">
               <p className="awaiting-rule">No copy on the hook</p>
               <p>
-                Send a job URL. Title, shop, town, pay, and skills land here as a
-                clipping.
+                Send a job URL. Title, shop, town, work type, pay, skills, and
+                notice land here as a clipping.
               </p>
             </div>
           ) : null}

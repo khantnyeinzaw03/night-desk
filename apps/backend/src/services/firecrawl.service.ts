@@ -1,41 +1,23 @@
 import { Firecrawl } from "firecrawl"
 import { JobScraper } from "../interfaces/scraper.interface"
+import { jobSchema, ScrapedJob } from "../interfaces/scraper.validation"
 
 export class FirecrawlService implements JobScraper {
   constructor(private readonly firecrawl: Firecrawl) {}
-  async scrape(url: string) {
-    const result = await this.firecrawl.scrape(url, {
-      formats: [
-        {
-          type: "json",
-          schema: {
-            type: "object",
-            properties: {
-              title: {
-                type: ["string", "null"],
-                description: "Page title. Return null if not found."
-              },
-              company: {
-                type: ["string", "null"],
-                description: "Company name. Return null if not found."
-              },
-              location: {
-                type: ["string", "null"],
-                description: "Location. Return null if not found."
-              },
-              skills: {
-                type: ["string", "null"],
-                description: "Skills. Return null if not found."
-              },
-              salary: {
-                type: ["string", "null"],
-                description: "Salary. Return null if not found."
-              }
-            }
+  async scrape(url: string): Promise<ScrapedJob> {
+    try {
+      const result = await this.firecrawl.scrape(url, {
+        formats: [
+          {
+            type: "json",
+            schema: jobSchema.toJSONSchema()
           }
-        }
-      ]
-    })
-    return result.json
+        ]
+      })
+      const parsedResult = jobSchema.parse(result.json)
+      return parsedResult
+    } catch (error) {
+      throw error
+    }
   }
 }

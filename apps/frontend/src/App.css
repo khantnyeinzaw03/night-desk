@@ -78,6 +78,7 @@
 .slip-label,
 .edition,
 .salary-label,
+.notice-label,
 .awaiting-rule,
 .extras dt {
   margin: 0;
@@ -268,6 +269,13 @@
   color: var(--rule);
 }
 
+.work-type {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .salary {
   display: flex;
   flex-direction: column;
@@ -297,6 +305,35 @@
   font-family: var(--mono);
   font-size: 0.72rem;
   letter-spacing: 0.02em;
+}
+
+.notice {
+  margin: 1.75rem 0 0;
+}
+
+.notice-copy {
+  margin: 0.45rem 0 0;
+  max-width: 40rem;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.source {
+  margin: 1.75rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.source a {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.source a:hover {
+  color: var(--ink);
 }
 
 .extras {
