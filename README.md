@@ -1,6 +1,6 @@
-# firecrawl
+# night-desk
 
-pnpm + Turborepo workspace with an Express scrape API and a Vite React UI.
+pnpm + Turborepo workspace: Express scrape API and a Vite React UI that typesets a job listing as a classified clipping. Scraping is powered by [Firecrawl](https://www.firecrawl.dev/).
 
 ## Requirements
 
