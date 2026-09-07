@@ -5,3 +5,5 @@ dist
 !.env.example
 .turbo
 *.local
+.pnpm-store
+!.env.development.local

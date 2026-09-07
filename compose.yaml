@@ -1,0 +1,96 @@
+x-node-volumes: &node-volumes
+  - .:/usr/src/app
+  - node_modules:/usr/src/app/node_modules
+  - backend_node_modules:/usr/src/app/apps/backend/node_modules
+  - frontend_node_modules:/usr/src/app/apps/frontend/node_modules
+  - pnpm_store:/root/.local/share/pnpm/store
+
+services:
+  install:
+    build: .
+    command: pnpm install --frozen-lockfile
+    volumes: *node-volumes
+    networks:
+      - firecrawl
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - firecrawl
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - firecrawl
+
+  backend:
+    build: .
+    command: pnpm --filter backend dev
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.development.local
+        required: true
+      - path: apps/backend/.env
+        required: false
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/job-scraper
+    volumes: *node-volumes
+    depends_on:
+      install:
+        condition: service_completed_successfully
+      mongo:
+        condition: service_healthy
+    networks:
+      - firecrawl
+
+  frontend:
+    build: .
+    command: pnpm --filter frontend dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    env_file:
+      - path: .env.development.local
+        required: true
+    environment:
+      CHOKIDAR_USEPOLLING: "1"
+    volumes: *node-volumes
+    depends_on:
+      install:
+        condition: service_completed_successfully
+    networks:
+      - firecrawl
+
+networks:
+  firecrawl:
+    name: firecrawl
+    driver: bridge
+
+volumes:
+  node_modules:
+  backend_node_modules:
+  frontend_node_modules:
+  pnpm_store:
+  mongo_data:
+  redis_data:

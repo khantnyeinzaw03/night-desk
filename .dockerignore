@@ -1,0 +1,8 @@
+**/.git
+**/.env
+**/apps/backend/.env
+**/node_modules
+**/dist
+**/.turbo
+**/.cache
+**/.pnpm-store
